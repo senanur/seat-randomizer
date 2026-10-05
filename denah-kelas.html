@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Denah Tempat Duduk</title>
+<style>
+  :root{
+    --paper:#FDFDFB;
+    --rule:#DDE7F1;
+    --ink:#16202E;
+    --graphite:#6E7885;
+    --hair:#C3CBD5;
+    --merah:#B4342C;
+    --mono:"Menlo","Consolas","DejaVu Sans Mono","Liberation Mono",monospace;
+    --serif:Georgia,"Iowan Old Style","Palatino Linotype",Palatino,serif;
+    --row-h:28px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+
+  body{
+    background:var(--paper);
+    background-image:repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--row-h) - 1px),
+      var(--rule) calc(var(--row-h) - 1px),
+      var(--rule) var(--row-h)
+    );
+    background-position:0 12px;
+    color:var(--ink);
+    font-family:var(--serif);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .sheet{
+    max-width:1240px;
+    margin:0 auto;
+    padding:0 24px 72px 44px;
+    position:relative;
+    display:grid;
+    grid-template-columns:288px 1fr;
+    gap:44px;
+    align-items:start;
+  }
+  .sheet::before{
+    content:"";
+    position:absolute;
+    top:0;bottom:0;left:24px;
+    border-left:1px solid var(--merah);
+    opacity:.4;
+  }
+
+  /* ---------- kepala ---------- */
+  .masthead{
+    grid-column:1 / -1;
+    padding:40px 0 20px;
+    border-bottom:1px solid var(--ink);
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .masthead h1{
+    font-family:var(--mono);
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    margin:0;
+  }
+  .masthead .sub{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--graphite);
+  }
+
+  /* ---------- panel kiri ---------- */
+  .rail{position:sticky;top:24px;padding-top:28px}
+  .field{margin-bottom:20px}
+  .field > label{
+    display:block;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--graphite);
+    margin-bottom:7px;
+  }
+  .field input[type=text],
+  .field textarea{
+    width:100%;
+    background:#fff;
+    border:1px solid var(--hair);
+    border-radius:0;
+    padding:9px 10px;
+    font-family:var(--serif);
+    font-size:15px;
+    color:var(--ink);
+  }
+  .field textarea{height:250px;line-height:1.55;resize:vertical}
+  .field input:focus-visible,
+  .field textarea:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+
+  .tally{
+    font-family:var(--mono);
+    font-size:11px;
+    line-height:1.7;
+    letter-spacing:.04em;
+    color:var(--graphite);
+    margin:-12px 0 20px;
+  }
+  .tally.over{color:var(--merah)}
+
+  .actions{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:10px}
+  .actions.kedua{margin-bottom:14px}
+  .kabar{
+    font-family:var(--mono);
+    font-size:10px;
+    line-height:1.7;
+    letter-spacing:.04em;
+    color:var(--graphite);
+    margin:0 0 18px;
+    min-height:1.7em;
+    white-space:pre-line;
+  }
+  .kabar.buruk{color:var(--merah)}
+
+  .peringatan{
+    border:1px solid var(--merah);
+    background:#FBF1F0;
+    padding:9px 11px;
+    margin:0 0 18px;
+    font-family:var(--mono);
+    font-size:10px;
+    line-height:1.7;
+    letter-spacing:.03em;
+    color:var(--merah);
+  }
+  .peringatan[hidden]{display:none}
+  .peringatan ul{margin:4px 0 0;padding-left:14px}
+
+  /* ---------- aturan duduk ---------- */
+  .kepala-aturan{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+  }
+  .kepala-aturan span{
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--graphite);
+  }
+  .daftar-aturan{
+    list-style:none;
+    margin:0;
+    padding:0;
+    max-height:240px;
+    overflow-y:auto;
+  }
+  .daftar-aturan li{
+    background:#fff;
+    border:1px solid var(--hair);
+    padding:7px 10px 8px;
+    margin-bottom:6px;
+    font-size:14px;
+    line-height:1.4;
+  }
+  .daftar-aturan li.salah{border-color:var(--merah)}
+  .daftar-aturan .jenis{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:2px;
+    font-family:var(--mono);
+    font-size:9.5px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--graphite);
+  }
+  .daftar-aturan li.salah .jenis{color:var(--merah)}
+  .daftar-aturan .jenis button{
+    padding:0;
+    border:none;
+    background:none;
+    color:var(--graphite);
+    font-size:9.5px;
+    letter-spacing:.1em;
+    text-decoration:underline;
+  }
+  .daftar-aturan .hilang{text-decoration:line-through;color:var(--graphite)}
+  .aturan-hampa{
+    font-family:var(--mono);
+    font-size:10px;
+    line-height:1.7;
+    color:var(--graphite);
+    margin:0;
+  }
+  button{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    padding:11px 16px;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    cursor:pointer;
+    border-radius:0;
+  }
+  button.ghost{background:transparent;color:var(--ink)}
+  button.kecil{padding:8px 12px;font-size:10px;letter-spacing:.12em}
+  button:hover{opacity:.82}
+  button:focus-visible{outline:2px solid var(--merah);outline-offset:2px}
+  button:disabled{opacity:.32;cursor:not-allowed}
+
+  .catatan{
+    font-family:var(--mono);
+    font-size:10px;
+    line-height:1.85;
+    letter-spacing:.03em;
+    color:var(--graphite);
+    border-top:1px solid var(--hair);
+    padding-top:12px;
+  }
+  .catatan b{color:var(--ink);font-weight:700}
+
+  /* ---------- ruangan ---------- */
+  .room{padding-top:28px}
+  .bar-mode{margin-bottom:14px}
+  .mode-pilih{display:flex}
+  .mode-pilih button{margin-left:-1px}
+  .mode-pilih button:first-child{margin-left:0}
+
+  .panel-atur{
+    margin-top:12px;
+    padding:14px 16px;
+    border:1px dashed var(--merah);
+    display:flex;
+    align-items:flex-end;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .panel-atur[hidden]{display:none}
+  .angka{display:flex;flex-direction:column;gap:6px}
+  .angka label{
+    font-family:var(--mono);
+    font-size:9.5px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--graphite);
+  }
+  .angka input{
+    width:74px;
+    padding:7px 8px;
+    border:1px solid var(--hair);
+    background:#fff;
+    font-family:var(--mono);
+    font-size:14px;
+    color:var(--ink);
+    border-radius:0;
+  }
+  .angka.lebar input{width:112px}
+  .angka input:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+  .pisah{align-self:stretch;width:1px;background:var(--hair);margin:0 2px}
+  .tombol-atur{display:flex;gap:8px;flex-wrap:wrap}
+
+  .canvas{
+    position:relative;
+    overflow:hidden;
+    border:1px solid var(--hair);
+    background:#fff;
+  }
+  .canvas.denah{border:1px dashed var(--merah)}
+  .plane{position:absolute;top:0;left:0;transform-origin:top left}
+
+  .board{
+    position:absolute;
+    top:22px;
+    height:44px;
+    border:1px solid var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:var(--mono);
+    font-size:13px;
+    letter-spacing:.44em;
+    text-transform:uppercase;
+    color:var(--graphite);
+  }
+
+  .desk{
+    position:absolute;
+    width:132px;
+    height:84px;
+    background:#fff;
+    border:1px solid var(--hair);
+    padding:20px 8px 10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    font-family:var(--serif);
+    font-size:17px;
+    line-height:1.25;
+    color:var(--ink);
+    overflow-wrap:anywhere;
+    cursor:pointer;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
+  }
+  .desk:focus-visible{outline:2px solid var(--merah);outline-offset:2px}
+  .desk .kode{
+    position:absolute;
+    top:6px;left:8px;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.08em;
+    color:var(--graphite);
+  }
+  .desk.kosong{border-style:dashed;color:var(--graphite);font-style:italic;font-size:15px}
+  .desk.terkunci{border:2px solid var(--ink)}
+  .desk.terkunci::after{
+    content:"";
+    position:absolute;
+    top:8px;right:9px;
+    width:8px;height:8px;
+    background:var(--ink);
+  }
+  .desk.langgar{border:2px solid var(--merah);background:#FBF1F0}
+  .desk.sasaran{outline:2px solid var(--merah);outline-offset:3px}
+  .desk.pudar{opacity:.35}
+
+  .canvas.denah .desk{cursor:grab}
+  .canvas.denah .desk.geser{cursor:grabbing;box-shadow:0 3px 0 rgba(22,32,46,.14);z-index:5}
+  .hapus{
+    position:absolute;
+    top:-9px;right:-9px;
+    width:20px;height:20px;
+    padding:0;
+    border:1px solid var(--merah);
+    background:#fff;
+    color:var(--merah);
+    font-family:var(--mono);
+    font-size:12px;
+    line-height:1;
+    letter-spacing:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+  }
+  .canvas.denah .hapus{display:flex}
+
+  .hantu{
+    position:absolute;
+    width:132px;height:84px;
+    background:#fff;
+    border:2px solid var(--ink);
+    box-shadow:0 4px 0 rgba(22,32,46,.16);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:8px;
+    font-family:var(--serif);
+    font-size:17px;
+    line-height:1.25;
+    overflow-wrap:anywhere;
+    pointer-events:none;
+    z-index:20;
+  }
+
+  .garis{position:absolute;background:var(--merah);display:none;pointer-events:none;z-index:9}
+  .garis.tegak{width:1px;top:0;bottom:0}
+  .garis.datar{height:1px;left:0;right:0}
+
+  .legenda{
+    margin-top:18px;
+    padding-top:12px;
+    border-top:1px solid var(--hair);
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.06em;
+    color:var(--graphite);
+    display:flex;
+    gap:26px;
+    flex-wrap:wrap;
+  }
+  .legenda b{color:var(--ink)}
+  .cetak-kop{display:none}
+
+  /* ---------- pemilih nama ---------- */
+  .tirai{
+    position:fixed;
+    inset:0;
+    background:rgba(22,32,46,.34);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:100;
+  }
+  .tirai[hidden]{display:none}
+  .pemilih{
+    background:var(--paper);
+    border:1px solid var(--ink);
+    width:min(420px,100%);
+    max-height:min(580px,86vh);
+    display:flex;
+    flex-direction:column;
+  }
+  .pemilih .kepala{
+    padding:16px 18px 12px;
+    border-bottom:1px solid var(--hair);
+  }
+  .pemilih .kepala h2{
+    margin:0 0 10px;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--graphite);
+  }
+  .pemilih input{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--hair);
+    background:#fff;
+    font-family:var(--serif);
+    font-size:15px;
+    color:var(--ink);
+    border-radius:0;
+  }
+  .pemilih input:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+  .daftar-nama{
+    overflow-y:auto;
+    flex:1;
+    padding:6px 0;
+  }
+  .daftar-nama button{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    width:100%;
+    text-align:left;
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--rule);
+    color:var(--ink);
+    font-family:var(--serif);
+    font-size:16px;
+    letter-spacing:0;
+    text-transform:none;
+    padding:11px 18px;
+  }
+  .daftar-nama button:hover{background:#fff;opacity:1}
+  .daftar-nama button:focus-visible{outline:2px solid var(--merah);outline-offset:-2px}
+  .daftar-nama .dimana{
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.08em;
+    color:var(--graphite);
+    white-space:nowrap;
+  }
+  .daftar-nama .hampa{
+    padding:18px;
+    font-family:var(--mono);
+    font-size:11px;
+    line-height:1.7;
+    color:var(--graphite);
+  }
+  .pemilih .kaki{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    padding:12px 18px;
+    border-top:1px solid var(--hair);
+  }
+  .pemilih .kaki .info{
+    margin-right:auto;
+    align-self:center;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.06em;
+    color:var(--graphite);
+  }
+
+  /* ---------- penyunting aturan ---------- */
+  .pilih-jenis{display:flex;margin-bottom:10px}
+  .pilih-jenis button{flex:1;margin-left:-1px}
+  .pilih-jenis button:first-child{margin-left:0}
+  .jelas{
+    margin:0 0 10px;
+    font-family:var(--mono);
+    font-size:10px;
+    line-height:1.7;
+    color:var(--graphite);
+  }
+  .opsi{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:.04em;
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .pemilih input[type=checkbox]{width:auto;margin:0;padding:0;accent-color:var(--ink)}
+  .daftar-centang label{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:10px 18px;
+    border-bottom:1px solid var(--rule);
+    font-size:16px;
+    cursor:pointer;
+  }
+  .daftar-centang label:hover{background:#fff}
+  .daftar-centang label.hilang span{text-decoration:line-through;color:var(--graphite)}
+
+  /* ---------- responsif ---------- */
+  @media (max-width:900px){
+    .sheet{grid-template-columns:1fr;gap:8px;padding:0 18px 56px 32px}
+    .sheet::before{left:16px}
+    .rail{position:static;padding-top:22px}
+    .field textarea{height:150px}
+    .panel-atur{gap:12px}
+    .angka input{width:64px}
+  }
+
+  /* ---------- cetak ---------- */
+  @page{margin:14mm}
+  @media print{
+    body{background:#fff;background-image:none}
+    .sheet{display:block;max-width:none;padding:0}
+    .sheet::before,.rail,.masthead,.bar-mode,.hapus,.tirai{display:none}
+    .room{padding-top:0}
+    .canvas,.canvas.denah{border:none}
+    .desk.langgar{border:1px solid var(--hair);background:#fff}
+    .desk.langgar.terkunci{border:2px solid var(--ink)}
+    .cetak-kop{
+      display:flex;
+      justify-content:space-between;
+      border-bottom:1px solid #000;
+      padding-bottom:9px;
+      margin-bottom:18px;
+      font-family:var(--mono);
+      font-size:11px;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <h1>Denah Tempat Duduk</h1>
+    <span class="sub" id="ringkas">28 meja</span>
+  </header>
+
+  <aside class="rail">
+    <div class="field">
+      <label for="kelas">Kelas</label>
+      <input type="text" id="kelas" placeholder="mis. XI PPLG 1" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="daftar">Daftar kelas &mdash; satu nama per baris</label>
+      <textarea id="daftar" spellcheck="false" placeholder="Aisyah Rahmadani&#10;Bagas Pratama&#10;Citra Ayu Lestari&#10;&hellip;"></textarea>
+    </div>
+
+    <p class="tally" id="tally">Belum ada nama.</p>
+
+    <div class="actions">
+      <button id="btn-acak" disabled>Acak</button>
+      <button id="btn-cetak" class="ghost">Cetak</button>
+    </div>
+
+    <div class="actions kedua">
+      <button id="btn-buka" class="ghost kecil">Lepas semua kunci</button>
+      <button id="btn-ekspor" class="ghost kecil">Ekspor</button>
+      <button id="btn-impor" class="ghost kecil">Impor</button>
+      <input type="file" id="berkas" accept="application/json,.json" hidden>
+    </div>
+
+    <div class="peringatan" id="peringatan" hidden></div>
+
+    <p class="kabar" id="kabar"></p>
+
+    <div class="field">
+      <div class="kepala-aturan">
+        <span>Aturan duduk</span>
+        <button id="btn-tambah-aturan" class="ghost kecil">Tambah aturan</button>
+      </div>
+      <ul class="daftar-aturan" id="daftar-aturan"></ul>
+    </div>
+
+    <p class="catatan">
+      <b>Seret</b> nama ke meja lain untuk menukar posisi.<br>
+      <b>Klik meja</b> untuk memilih siapa yang duduk di situ.<br>
+      Penempatan manual otomatis terkunci &mdash; <b>Acak</b> hanya mengisi meja yang belum ditentukan.<br>
+      <b>Aturan duduk</b> selalu dipatuhi saat Acak. Kalau tidak mungkin dipenuhi, Acak dibatalkan dan denah tidak berubah.<br>
+      <b>Impor menimpa</b> denah yang sedang terbuka. Ekspor dulu kalau masih dibutuhkan.
+    </p>
+  </aside>
+
+  <main class="room">
+    <div class="cetak-kop">
+      <span id="kop-kelas">&mdash;</span>
+      <span id="kop-tanggal"></span>
+    </div>
+
+    <div class="bar-mode">
+      <div class="mode-pilih">
+        <button id="mode-siswa">Siswa</button>
+        <button id="mode-denah" class="ghost">Denah</button>
+      </div>
+
+      <div class="panel-atur" id="panel-atur" hidden>
+        <div class="angka">
+          <label for="in-baris">Baris</label>
+          <input type="number" id="in-baris" min="1" max="14" value="5">
+        </div>
+        <div class="angka">
+          <label for="in-kolom">Kolom</label>
+          <input type="number" id="in-kolom" min="1" max="14" value="6">
+        </div>
+        <div class="angka lebar">
+          <label for="in-lorong">Lorong setelah kolom</label>
+          <input type="text" id="in-lorong" value="3" placeholder="mis. 2,4" autocomplete="off">
+        </div>
+        <button class="kecil" id="btn-susun">Susun ulang</button>
+
+        <div class="pisah" aria-hidden="true"></div>
+
+        <div class="tombol-atur">
+          <button class="ghost kecil" id="btn-tambah">Tambah meja</button>
+          <button class="ghost kecil" id="btn-bawaan">Denah kelas saya</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas" id="canvas">
+      <div class="plane" id="plane">
+        <div class="board" id="board">Papan tulis</div>
+        <div class="garis tegak" id="garis-v"></div>
+        <div class="garis datar" id="garis-h"></div>
+      </div>
+    </div>
+
+    <div class="legenda">
+      <span><b>1.3</b> = baris 1, meja ke-3 dari kiri</span>
+      <span><b>&#9632;</b> = terkunci, tidak ikut diacak</span>
+      <span>Lorong <b>2,4</b> = dua lorong &middot; kosongkan = tanpa lorong</span>
+      <span><b style="color:var(--merah)">&#9634;</b> = melanggar aturan duduk</span>
+    </div>
+  </main>
+
+</div>
+
+<div class="tirai" id="tirai" hidden>
+  <div class="pemilih" role="dialog" aria-modal="true" aria-labelledby="pemilih-judul">
+    <div class="kepala">
+      <h2 id="pemilih-judul">Meja</h2>
+      <input type="text" id="cari" placeholder="Cari nama&hellip;" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="daftar-nama" id="daftar-nama"></div>
+    <div class="kaki">
+      <button class="ghost kecil" id="btn-kosongkan">Kosongkan meja</button>
+      <button class="ghost kecil" id="btn-lepas">Lepas kunci</button>
+      <button class="ghost kecil" id="btn-tutup">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div class="tirai" id="tirai-aturan" hidden>
+  <div class="pemilih" role="dialog" aria-modal="true" aria-labelledby="aturan-judul">
+    <div class="kepala">
+      <h2 id="aturan-judul">Aturan baru</h2>
+      <div class="pilih-jenis">
+        <button type="button" class="kecil" id="jenis-pisah">Pisahkan</button>
+        <button type="button" class="kecil ghost" id="jenis-dekat">Dekatkan</button>
+      </div>
+      <p class="jelas" id="jenis-jelas"></p>
+      <label class="opsi"><input type="checkbox" id="aturan-opsi"><span id="aturan-opsi-teks"></span></label>
+      <input type="text" id="cari-aturan" placeholder="Cari nama&hellip;" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="daftar-nama daftar-centang" id="daftar-centang"></div>
+    <div class="kaki">
+      <span class="info" id="info-aturan"></span>
+      <button class="kecil" id="btn-simpan-aturan">Simpan</button>
+      <button class="ghost kecil" id="btn-batal-aturan">Batal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var KUNCI = "denah:kanvas-v3";
+
+  var W = 132, H = 84;
+  var JARAK_X = 16, JARAK_Y = 36;
+  var TEPI = 60, ATAS = 110, BAWAH = 60;
+  var LORONG = 34;
+  var TEMPEL = 9;
+  var RAPAT = JARAK_X + Math.floor(LORONG / 2);   // celah kiri-kanan terlebar yang masih dihitung bersebelahan; lorong memisahkan
+  var WAKTU_ACAK = 1500;                          // ms maksimum untuk mencari susunan yang memenuhi aturan
+
+  var VW = 1000, VH = 734;
+
+  var elDaftar = document.getElementById("daftar");
+  var elKelas  = document.getElementById("kelas");
+  var elTally  = document.getElementById("tally");
+  var elRingkas= document.getElementById("ringkas");
+  var canvas   = document.getElementById("canvas");
+  var plane    = document.getElementById("plane");
+  var board    = document.getElementById("board");
+  var garisV   = document.getElementById("garis-v");
+  var garisH   = document.getElementById("garis-h");
+  var panel    = document.getElementById("panel-atur");
+
+  var inBaris  = document.getElementById("in-baris");
+  var inKolom  = document.getElementById("in-kolom");
+  var inLorong = document.getElementById("in-lorong");
+
+  var btnAcak  = document.getElementById("btn-acak");
+  var btnCetak = document.getElementById("btn-cetak");
+  var btnBuka  = document.getElementById("btn-buka");
+  var btnEkspor= document.getElementById("btn-ekspor");
+  var btnImpor = document.getElementById("btn-impor");
+  var elBerkas = document.getElementById("berkas");
+  var elKabar  = document.getElementById("kabar");
+  var mSiswa   = document.getElementById("mode-siswa");
+  var mDenah   = document.getElementById("mode-denah");
+  var btnSusun = document.getElementById("btn-susun");
+  var btnTambah= document.getElementById("btn-tambah");
+  var btnBawaan= document.getElementById("btn-bawaan");
+
+  var tirai      = document.getElementById("tirai");
+  var elCari     = document.getElementById("cari");
+  var elNamaList = document.getElementById("daftar-nama");
+  var judulPilih = document.getElementById("pemilih-judul");
+  var btnKosong  = document.getElementById("btn-kosongkan");
+  var btnLepas   = document.getElementById("btn-lepas");
+  var btnTutup   = document.getElementById("btn-tutup");
+
+  var elPeringatan  = document.getElementById("peringatan");
+  var elDaftarAturan= document.getElementById("daftar-aturan");
+  var btnTambahAturan = document.getElementById("btn-tambah-aturan");
+  var tiraiAturan   = document.getElementById("tirai-aturan");
+  var judulAturan   = document.getElementById("aturan-judul");
+  var jPisah        = document.getElementById("jenis-pisah");
+  var jDekat        = document.getElementById("jenis-dekat");
+  var elJelas       = document.getElementById("jenis-jelas");
+  var elOpsi        = document.getElementById("aturan-opsi");
+  var elOpsiTeks    = document.getElementById("aturan-opsi-teks");
+  var elCariAturan  = document.getElementById("cari-aturan");
+  var elCentang     = document.getElementById("daftar-centang");
+  var elInfoAturan  = document.getElementById("info-aturan");
+  var btnSimpanAturan = document.getElementById("btn-simpan-aturan");
+  var btnBatalAturan  = document.getElementById("btn-batal-aturan");
+
+  var meja = [], isi = {}, kunci = {};
+  var aturan = [];          // [{jenis:"pisah"|"dekat", nama:[...], opsi:bool}]
+  var draf = null;          // aturan yang sedang disunting
+  var modeDenah = false, skala = 1, urutId = 0;
+  var mejaTerpilih = null;
+  var hantu = null;
+
+  /* ---------- penyusun denah ---------- */
+  function bacaLorong(teks, kolom){
+    return String(teks == null ? "" : teks)
+      .split(/[,;\s]+/)
+      .map(function(t){ return parseInt(t, 10); })
+      .filter(function(n){ return n > 0 && n < kolom; })
+      .filter(function(n, i, a){ return a.indexOf(n) === i; })
+      .sort(function(a, b){ return a - b; });
+  }
+
+  function susun(baris, kolom, teksLorong){
+    baris = Math.max(1, Math.min(14, baris|0));
+    kolom = Math.max(1, Math.min(14, kolom|0));
+    var lorong = bacaLorong(teksLorong, kolom);
+
+    VW = TEPI * 2 + kolom * W + (kolom - 1) * JARAK_X + lorong.length * LORONG;
+    VH = ATAS + baris * H + (baris - 1) * JARAK_Y + BAWAH;
+
+    var hasil = [], n = 0;
+    for (var b = 0; b < baris; b++){
+      for (var k = 0; k < kolom; k++){
+        var sebelum = lorong.filter(function(p){ return k >= p; }).length;
+        hasil.push({
+          id:"m" + (n++),
+          x: TEPI + k * (W + JARAK_X) + sebelum * LORONG,
+          y: ATAS + b * (H + JARAK_Y)
+        });
+      }
+    }
+    urutId = n;
+    return hasil;
+  }
+
+  function denahBawaan(){
+    var d = susun(5, 6, "3");
+    var barisAkhir = ATAS + 4 * (H + JARAK_Y);
+    return d.filter(function(m, i){
+      if (m.y !== barisAkhir) return true;
+      var k = i % 6;
+      return (k === 0 || k >= 3);
+    });
+  }
+
+  /* ---------- baris disimpulkan dari posisi ---------- */
+  function barisDariPosisi(){
+    var sisa = meja.slice().sort(function(a,b){ return a.y - b.y || a.x - b.x; });
+    var baris = [];
+    while (sisa.length){
+      var patokan = sisa[0].y;
+      var satu = sisa.filter(function(m){ return Math.abs(m.y - patokan) < H * 0.6; });
+      sisa = sisa.filter(function(m){ return satu.indexOf(m) === -1; });
+      satu.sort(function(a,b){ return a.x - b.x; });
+      baris.push(satu);
+    }
+    return baris;
+  }
+
+  function kursiTerurut(){
+    var hasil = [];
+    barisDariPosisi().forEach(function(b, i){
+      b.forEach(function(m, j){ hasil.push({m:m, kode:(i+1) + "." + (j+1)}); });
+    });
+    return hasil;
+  }
+
+  function kodeMeja(id){
+    var k = kursiTerurut().filter(function(q){ return q.m.id === id; })[0];
+    return k ? k.kode : "";
+  }
+
+  /* kursi berurutan + siapa bersebelahan dengan siapa (kiri-kanan, depan-belakang, diagonal) */
+  function petaKursi(){
+    var kursi = [];
+    barisDariPosisi().forEach(function(b, i){
+      b.forEach(function(m, j){ kursi.push({m:m, baris:i, kode:(i+1) + "." + (j+1)}); });
+    });
+    var n = kursi.length, dekat = [];
+    for (var a = 0; a < n; a++) dekat.push([]);
+    for (a = 0; a < n; a++){
+      dekat[a][a] = false;
+      for (var b = a + 1; b < n; b++){
+        var p = kursi[a], q = kursi[b];
+        var celah = Math.max(0, Math.abs(p.m.x - q.m.x) - W);
+        dekat[a][b] = dekat[b][a] = Math.abs(p.baris - q.baris) <= 1 && celah <= RAPAT;
+      }
+    }
+    return {kursi:kursi, dekat:dekat};
+  }
+
+  /* ---------- aturan duduk ---------- */
+  function teksAturan(r){
+    var jenis = r.jenis === "pisah"
+      ? "Pisahkan" + (r.opsi ? " (beda baris)" : "")
+      : "Dekatkan" + (r.opsi ? " (sebaris)" : "");
+    return jenis + ": " + r.nama.join(", ");
+  }
+
+  /* aturan yang berlaku: hanya nama yang ada di daftar kelas, minimal dua orang */
+  function aturanAktif(){
+    var ada = {};
+    bacaNama().forEach(function(n){ ada[n] = true; });
+    return aturan
+      .map(function(r){ return {r:r, nama:r.nama.filter(function(n){ return ada[n]; })}; })
+      .filter(function(a){ return a.nama.length >= 2; });
+  }
+
+  /* jumlah pelanggaran satu aturan; posisi = nama -> indeks kursi. Anggota yang belum duduk diabaikan. */
+  function nilaiAturan(a, posisi, peta, catat){
+    var kursi = a.nama.map(function(n){ return posisi[n]; })
+      .filter(function(i){ return i !== undefined; });
+    var buruk = 0, i, j;
+
+    if (a.r.jenis === "pisah"){
+      for (i = 0; i < kursi.length; i++){
+        for (j = i + 1; j < kursi.length; j++){
+          var p = kursi[i], q = kursi[j];
+          if (peta.dekat[p][q] || (a.r.opsi && peta.kursi[p].baris === peta.kursi[q].baris)){
+            buruk++;
+            if (catat){ catat[p] = true; catat[q] = true; }
+          }
+        }
+      }
+      return buruk;
+    }
+
+    /* dekatkan: semua anggota harus tersambung sebagai satu kelompok */
+    var sisa = kursi.slice(), kelompok = 0;
+    while (sisa.length){
+      kelompok++;
+      var antre = [sisa.pop()];
+      while (antre.length){
+        var x = antre.pop();
+        for (j = sisa.length - 1; j >= 0; j--){
+          var y = sisa[j];
+          if (peta.dekat[x][y] && (!a.r.opsi || peta.kursi[x].baris === peta.kursi[y].baris)){
+            antre.push(y);
+            sisa.splice(j, 1);
+          }
+        }
+      }
+    }
+    buruk = Math.max(0, kelompok - 1);
+    if (buruk && catat) kursi.forEach(function(k){ catat[k] = true; });
+    return buruk;
+  }
+
+  /* periksa susunan yang sedang tampil */
+  function periksaSekarang(peta){
+    var posisi = {};
+    peta.kursi.forEach(function(k, i){ var n = isi[k.m.id]; if (n) posisi[n] = i; });
+    var catat = {}, langgar = [];
+    aturanAktif().forEach(function(a){
+      if (nilaiAturan(a, posisi, peta, catat)) langgar.push(a.r);
+    });
+    var mejaLanggar = {};
+    Object.keys(catat).forEach(function(i){ mejaLanggar[peta.kursi[i].m.id] = true; });
+    return {langgar:langgar, mejaLanggar:mejaLanggar};
+  }
+
+  /* hal yang pasti mustahil, diperiksa sebelum mencari */
+  function periksaAwal(dipesan, peta){
+    var aktif = aturanAktif(), posisi = {}, masalah = [];
+    var jumlahBaris = peta.kursi.length ? peta.kursi[peta.kursi.length - 1].baris + 1 : 0;
+    Object.keys(dipesan).forEach(function(i){ posisi[dipesan[i]] = +i; });
+
+    aktif.forEach(function(a){
+      var semuaTerkunci = a.nama.every(function(n){ return posisi[n] !== undefined; });
+      if ((a.r.jenis === "pisah" || semuaTerkunci) && nilaiAturan(a, posisi, peta))
+        masalah.push(teksAturan(a.r) + " — dilanggar oleh meja yang terkunci.");
+      if (a.r.jenis === "pisah" && a.r.opsi && a.nama.length > jumlahBaris)
+        masalah.push(teksAturan(a.r) + " — " + a.nama.length + " orang tapi hanya ada " + jumlahBaris + " baris.");
+    });
+
+    aktif.forEach(function(d){
+      if (d.r.jenis !== "dekat") return;
+      aktif.forEach(function(p){
+        if (p.r.jenis === "pisah" && d.nama.every(function(n){ return p.nama.indexOf(n) !== -1; }))
+          masalah.push(d.nama.join(", ") + " diminta berdekatan sekaligus dipisahkan.");
+      });
+    });
+    return masalah;
+  }
+
+  /*
+    Mencari susunan yang memenuhi semua aturan: acak, lalu perbaiki dengan menukar
+    siswa yang melanggar ke kursi yang paling mengurangi pelanggaran (min-conflicts),
+    diulang dari awal sampai waktu habis.
+    Tahap 1 hanya memakai kursi depan (seperti Acak biasa, meja kosong di belakang);
+    tahap 2 boleh memakai semua kursi bebas kalau tahap 1 gagal.
+  */
+  function cariSusunan(nama, dipesan, peta, batasMs){
+    var aktif = aturanAktif();
+    var n = peta.kursi.length;
+    var terpesan = Object.keys(dipesan).map(function(i){ return dipesan[i]; });
+    var siswa = nama.filter(function(x){ return terpesan.indexOf(x) === -1; });
+    var bebas = [];
+    for (var i = 0; i < n; i++) if (!(i in dipesan)) bebas.push(i);
+
+    var aturanMilik = {};
+    aktif.forEach(function(a, k){
+      a.nama.forEach(function(nm){ (aturanMilik[nm] = aturanMilik[nm] || []).push(k); });
+    });
+
+    var kolam = [bebas.slice(0, siswa.length)];
+    if (bebas.length > siswa.length) kolam.push(bebas);
+
+    var isiKursi, posisi, nilai, total;
+
+    function terdampak(a, b){
+      var hasil = [];
+      [isiKursi[a], isiKursi[b]].forEach(function(nm){
+        (nm && aturanMilik[nm] || []).forEach(function(k){ if (hasil.indexOf(k) === -1) hasil.push(k); });
+      });
+      return hasil;
+    }
+    function tukarKursi(a, b){
+      var x = isiKursi[a], y = isiKursi[b];
+      isiKursi[a] = y; isiKursi[b] = x;
+      if (x) posisi[x] = b;
+      if (y) posisi[y] = a;
+    }
+    function selisih(a, b){
+      var kena = terdampak(a, b), lama = 0, baru = 0;
+      kena.forEach(function(k){ lama += nilai[k]; });
+      tukarKursi(a, b);
+      kena.forEach(function(k){ baru += nilaiAturan(aktif[k], posisi, peta); });
+      tukarKursi(a, b);
+      return baru - lama;
+    }
+    function lakukan(a, b){
+      var kena = terdampak(a, b);
+      tukarKursi(a, b);
+      kena.forEach(function(k){
+        var v = nilaiAturan(aktif[k], posisi, peta);
+        total += v - nilai[k];
+        nilai[k] = v;
+      });
+    }
+    function pilihAcak(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+    var terbaik = null, mulai = Date.now();
+    for (var f = 0; f < kolam.length; f++){
+      var pool = kolam[f];
+      var batas = mulai + (f === 0 && kolam.length > 1 ? batasMs * 0.4 : batasMs);
+      do {
+        isiKursi = new Array(n).fill(null);
+        posisi = {};
+        Object.keys(dipesan).forEach(function(k){ isiKursi[k] = dipesan[k]; posisi[dipesan[k]] = +k; });
+        var urut = acakUrutan(pool);
+        acakUrutan(siswa).forEach(function(s, k){ isiKursi[urut[k]] = s; posisi[s] = urut[k]; });
+
+        nilai = aktif.map(function(a){ return nilaiAturan(a, posisi, peta); });
+        total = nilai.reduce(function(s, v){ return s + v; }, 0);
+
+        for (var langkah = 0; total > 0 && langkah < 2000 && pool.length > 1; langkah++){
+          var calon = [];
+          nilai.forEach(function(v, k){
+            if (!v) return;
+            aktif[k].nama.forEach(function(nm){
+              var p = posisi[nm];
+              if (p !== undefined && !(p in dipesan) && calon.indexOf(nm) === -1) calon.push(nm);
+            });
+          });
+          if (!calon.length) break;
+
+          var a = posisi[pilihAcak(calon)], b;
+          if (Math.random() < 0.1){
+            b = pilihAcak(pool);
+          } else {
+            var paling = Infinity, pilihan = [];
+            pool.forEach(function(q){
+              if (q === a) return;
+              var d = selisih(a, q);
+              if (d < paling){ paling = d; pilihan = [q]; }
+              else if (d === paling) pilihan.push(q);
+            });
+            b = pilihAcak(pilihan);
+          }
+          if (b !== undefined && b !== a) lakukan(a, b);
+        }
+
+        if (!terbaik || total < terbaik.total)
+          terbaik = {total:total, langgar:aktif.filter(function(x, k){ return nilai[k] > 0; }).map(function(x){ return x.r; })};
+        if (total === 0) return {ok:true, isiKursi:isiKursi};
+      } while (Date.now() < batas);
+    }
+    return {ok:false, langgar:terbaik ? terbaik.langgar : []};
+  }
+
+  /* ---------- nama ---------- */
+  function bacaNama(){
+    return elDaftar.value.split("\n")
+      .map(function(b){
+        return b.replace(/^\s*\d+[.)\]]?\s*/,"").replace(/^\s*[-*\u2022]\s*/,"").trim();
+      })
+      .filter(function(b){ return b.length > 0; });
+  }
+
+  function acakUrutan(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  /* daftar kelas berubah: nama hilang dilepas dari mejanya, sisanya tidak diganggu */
+  function selaraskanDaftar(){
+    var nama = bacaNama();
+    Object.keys(isi).forEach(function(id){
+      if (nama.indexOf(isi[id]) === -1){
+        delete isi[id];
+        delete kunci[id];
+      }
+    });
+  }
+
+  function segarkanTally(){
+    var n = bacaNama().length, k = meja.length, lebih = false, teks;
+    var terkunci = Object.keys(kunci).length;
+
+    if (n === 0){
+      teks = "Belum ada nama.";
+    } else if (n > k){
+      teks = n + " nama untuk " + k + " meja. Kurangi " + (n - k) + " nama atau tambah meja.";
+      lebih = true;
+    } else {
+      teks = n + " nama \u00b7 " + k + " meja \u00b7 " + (k - n) + " kosong";
+      if (terkunci) teks += " \u00b7 " + terkunci + " terkunci";
+    }
+
+    elTally.textContent = teks;
+    elTally.classList.toggle("over", lebih);
+    btnAcak.disabled = (n === 0 || lebih || modeDenah);
+    elRingkas.textContent = k + " meja \u00b7 " + barisDariPosisi().length + " baris";
+  }
+
+  function acak(){
+    var nama = bacaNama();
+    if (!nama.length) return;
+
+    var peta = petaKursi();
+    var indeks = {};
+    peta.kursi.forEach(function(k, i){ indeks[k.m.id] = i; });
+
+    var dipesan = {};   // indeks kursi -> nama yang terkunci di situ
+    Object.keys(kunci).forEach(function(id){
+      var n = isi[id];
+      if (n && nama.indexOf(n) !== -1 && indeks[id] !== undefined) dipesan[indeks[id]] = n;
+      else delete kunci[id];
+    });
+
+    var masalah = periksaAwal(dipesan, peta);
+    if (masalah.length){
+      kabar("Acak dibatalkan — aturan tidak mungkin dipenuhi:\n• " + masalah.join("\n• "), true, true);
+      gambar(); segarkanTally();
+      return;
+    }
+
+    btnAcak.disabled = true;
+    btnAcak.textContent = "Mengacak…";
+    setTimeout(function(){
+      var hasil = cariSusunan(nama, dipesan, peta, WAKTU_ACAK);
+      btnAcak.textContent = "Acak";
+
+      if (!hasil.ok){
+        kabar("Acak dibatalkan — tidak ditemukan susunan yang memenuhi semua aturan. Denah tidak diubah."
+          + (hasil.langgar.length ? "\nPaling sulit dipenuhi:\n• " + hasil.langgar.map(teksAturan).join("\n• ") : "")
+          + "\nCoba longgarkan aturan, lepas kunci, atau tambah meja.", true, true);
+        segarkanTally();
+        return;
+      }
+
+      isi = {};
+      hasil.isiKursi.forEach(function(n, i){ if (n) isi[peta.kursi[i].m.id] = n; });
+      kabar("");
+      gambar(); segarkanTally(); simpan();
+    }, 20);
+  }
+
+  /* ---------- menukar isi dua meja ---------- */
+  function tukar(idA, idB){
+    if (idA === idB) return;
+    var a = isi[idA], b = isi[idB];
+
+    if (b === undefined) delete isi[idA]; else isi[idA] = b;
+    if (a === undefined) delete isi[idB]; else isi[idB] = a;
+
+    [idA, idB].forEach(function(id){
+      if (isi[id]) kunci[id] = true; else delete kunci[id];
+    });
+  }
+
+  /* menempatkan seorang siswa di meja tertentu */
+  function tempatkan(idMeja, nama){
+    var asal = Object.keys(isi).filter(function(id){ return isi[id] === nama; })[0];
+    if (asal === idMeja){
+      kunci[idMeja] = true;
+    } else if (asal !== undefined){
+      tukar(asal, idMeja);
+    } else {
+      isi[idMeja] = nama;
+      kunci[idMeja] = true;
+    }
+  }
+
+  /* ---------- gambar ---------- */
+  function gambar(){
+    Array.prototype.slice.call(plane.querySelectorAll(".desk")).forEach(function(el){ el.remove(); });
+
+    var peta = petaKursi();
+    var cek = periksaSekarang(peta);
+
+    peta.kursi.forEach(function(k){
+      var m = k.m, nama = isi[m.id];
+      var el = document.createElement("div");
+      el.className = "desk" + (nama ? "" : " kosong") + (kunci[m.id] ? " terkunci" : "")
+        + (cek.mejaLanggar[m.id] ? " langgar" : "");
+      el.style.left = m.x + "px";
+      el.style.top  = m.y + "px";
+      el.dataset.id = m.id;
+      el.tabIndex = 0;
+      el.title = modeDenah ? "Seret untuk memindahkan meja" : "Klik untuk memilih siswa \u00b7 seret untuk menukar";
+
+      var kode = document.createElement("span");
+      kode.className = "kode";
+      kode.textContent = k.kode;
+      el.appendChild(kode);
+
+      var teks = document.createElement("span");
+      teks.textContent = nama || "kosong";
+      el.appendChild(teks);
+
+      var x = document.createElement("button");
+      x.className = "hapus";
+      x.type = "button";
+      x.textContent = "\u00d7";
+      x.title = "Hapus meja";
+      x.addEventListener("pointerdown", function(ev){ ev.stopPropagation(); });
+      x.addEventListener("click", function(ev){
+        ev.stopPropagation();
+        meja = meja.filter(function(q){ return q.id !== m.id; });
+        delete isi[m.id]; delete kunci[m.id];
+        gambar(); segarkanTally(); simpan();
+      });
+      el.appendChild(x);
+
+      pasangInteraksi(el, m);
+      plane.appendChild(el);
+    });
+
+    tampilPeringatan(cek.langgar);
+    gambarAturan(cek.langgar);
+  }
+
+  function tampilPeringatan(langgar){
+    elPeringatan.innerHTML = "";
+    elPeringatan.hidden = !langgar.length;
+    if (!langgar.length) return;
+    var judul = document.createElement("div");
+    judul.textContent = "Susunan sekarang melanggar " + langgar.length + " aturan:";
+    var ul = document.createElement("ul");
+    langgar.forEach(function(r){
+      var li = document.createElement("li");
+      li.textContent = teksAturan(r);
+      ul.appendChild(li);
+    });
+    elPeringatan.appendChild(judul);
+    elPeringatan.appendChild(ul);
+  }
+
+  function gambarAturan(langgar){
+    var ada = {};
+    bacaNama().forEach(function(n){ ada[n] = true; });
+    elDaftarAturan.innerHTML = "";
+
+    if (!aturan.length){
+      var p = document.createElement("li");
+      p.className = "aturan-hampa";
+      p.style.cssText = "border:none;background:none;padding:0";
+      p.textContent = "Belum ada aturan. Semua siswa diacak bebas.";
+      elDaftarAturan.appendChild(p);
+      return;
+    }
+
+    aturan.forEach(function(r){
+      var li = document.createElement("li");
+      if (langgar.indexOf(r) !== -1) li.className = "salah";
+
+      var kepala = document.createElement("div");
+      kepala.className = "jenis";
+      var label = document.createElement("span");
+      label.textContent = r.jenis === "pisah"
+        ? "Pisahkan" + (r.opsi ? " · beda baris" : "")
+        : "Dekatkan" + (r.opsi ? " · sebaris" : "");
+      kepala.appendChild(label);
+
+      var tombol = document.createElement("span");
+      var ubah = document.createElement("button");
+      ubah.type = "button"; ubah.textContent = "ubah";
+      ubah.addEventListener("click", function(){ bukaEditor(r); });
+      var hapus = document.createElement("button");
+      hapus.type = "button"; hapus.textContent = "hapus";
+      hapus.style.marginLeft = "10px";
+      hapus.addEventListener("click", function(){
+        aturan = aturan.filter(function(x){ return x !== r; });
+        gambar(); simpan();
+      });
+      tombol.appendChild(ubah); tombol.appendChild(hapus);
+      kepala.appendChild(tombol);
+      li.appendChild(kepala);
+
+      var aktif = r.nama.filter(function(n){ return ada[n]; }).length;
+      r.nama.forEach(function(n, i){
+        var s = document.createElement("span");
+        s.textContent = n;
+        if (!ada[n]){ s.className = "hilang"; s.title = "Tidak ada di daftar kelas — diabaikan"; }
+        li.appendChild(s);
+        if (i < r.nama.length - 1) li.appendChild(document.createTextNode(", "));
+      });
+      if (aktif < 2){
+        li.title = "Kurang dari dua nama yang ada di daftar kelas — aturan ini tidak berlaku";
+        li.style.opacity = ".55";
+      }
+      elDaftarAturan.appendChild(li);
+    });
+  }
+
+  /* ---------- penyunting aturan ---------- */
+  function bukaEditor(r){
+    draf = r
+      ? {asal:r, jenis:r.jenis, nama:r.nama.slice(), opsi:!!r.opsi}
+      : {asal:null, jenis:"pisah", nama:[], opsi:false};
+    judulAturan.textContent = r ? "Ubah aturan" : "Aturan baru";
+    elCariAturan.value = "";
+    segarkanEditor();
+    tiraiAturan.hidden = false;
+    elCariAturan.focus();
+  }
+
+  function tutupEditor(){
+    tiraiAturan.hidden = true;
+    draf = null;
+  }
+
+  function segarkanEditor(){
+    var pisah = draf.jenis === "pisah";
+    jPisah.classList.toggle("ghost", !pisah);
+    jDekat.classList.toggle("ghost", pisah);
+    elOpsi.checked = draf.opsi;
+    elOpsiTeks.textContent = pisah ? "Juga harus beda baris" : "Harus sebaris (kiri-kanan saja)";
+    elJelas.textContent = pisah
+      ? "Tidak ada dua anggota yang boleh duduk bersebelahan — kiri, kanan, depan, belakang, maupun diagonal. Lorong dihitung sebagai pemisah."
+      : "Semua anggota harus duduk mengumpul: tiap anggota bersebelahan dengan anggota lain, termasuk depan-belakang dan diagonal.";
+    isiCentang();
+  }
+
+  function isiCentang(){
+    var cari = elCariAturan.value.trim().toLowerCase();
+    var semua = bacaNama();
+    var hilang = draf.nama.filter(function(n){ return semua.indexOf(n) === -1; });
+    var tampil = hilang.concat(semua).filter(function(n){
+      return !cari || n.toLowerCase().indexOf(cari) !== -1;
+    });
+
+    elCentang.innerHTML = "";
+    if (!semua.length && !hilang.length){
+      var p = document.createElement("p");
+      p.className = "hampa";
+      p.textContent = "Daftar kelas masih kosong. Isi dulu nama-namanya di panel kiri.";
+      elCentang.appendChild(p);
+    } else if (!tampil.length){
+      var q = document.createElement("p");
+      q.className = "hampa";
+      q.textContent = "Tidak ada nama yang cocok.";
+      elCentang.appendChild(q);
+    }
+
+    tampil.forEach(function(n){
+      var label = document.createElement("label");
+      if (semua.indexOf(n) === -1){ label.className = "hilang"; label.title = "Tidak ada di daftar kelas"; }
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = draf.nama.indexOf(n) !== -1;
+      cb.addEventListener("change", function(){
+        if (cb.checked){ if (draf.nama.indexOf(n) === -1) draf.nama.push(n); }
+        else draf.nama = draf.nama.filter(function(x){ return x !== n; });
+        segarkanInfoAturan();
+      });
+      var s = document.createElement("span");
+      s.textContent = n;
+      label.appendChild(cb);
+      label.appendChild(s);
+      elCentang.appendChild(label);
+    });
+    segarkanInfoAturan();
+  }
+
+  function segarkanInfoAturan(){
+    var n = draf.nama.length;
+    elInfoAturan.textContent = n + " dipilih" + (n < 2 ? " · minimal 2" : "");
+    btnSimpanAturan.disabled = n < 2;
+  }
+
+  function simpanAturan(){
+    if (!draf || draf.nama.length < 2) return;
+    var baru = {jenis:draf.jenis, nama:draf.nama.slice(), opsi:draf.opsi};
+    if (draf.asal){
+      var i = aturan.indexOf(draf.asal);
+      if (i !== -1) aturan[i] = baru; else aturan.push(baru);
+    } else {
+      aturan.push(baru);
+    }
+    tutupEditor();
+    gambar(); simpan();
+  }
+
+  btnTambahAturan.addEventListener("click", function(){ bukaEditor(null); });
+  jPisah.addEventListener("click", function(){ draf.jenis = "pisah"; segarkanEditor(); });
+  jDekat.addEventListener("click", function(){ draf.jenis = "dekat"; segarkanEditor(); });
+  elOpsi.addEventListener("change", function(){ draf.opsi = elOpsi.checked; });
+  elCariAturan.addEventListener("input", isiCentang);
+  elCariAturan.addEventListener("keydown", function(ev){ if (ev.key === "Escape") tutupEditor(); });
+  btnSimpanAturan.addEventListener("click", simpanAturan);
+  btnBatalAturan.addEventListener("click", tutupEditor);
+  tiraiAturan.addEventListener("pointerdown", function(ev){
+    if (ev.target === tiraiAturan) tutupEditor();
+  });
+
+  /* ---------- koordinat ---------- */
+  function keMaya(ev){
+    var r = canvas.getBoundingClientRect();
+    return { x:(ev.clientX - r.left) / skala, y:(ev.clientY - r.top) / skala };
+  }
+
+  function mejaDi(p){
+    for (var i = meja.length - 1; i >= 0; i--){
+      var m = meja[i];
+      if (p.x >= m.x && p.x <= m.x + W && p.y >= m.y && p.y <= m.y + H) return m;
+    }
+    return null;
+  }
+
+  function elMeja(id){ return plane.querySelector('.desk[data-id="' + id + '"]'); }
+
+  /* ---------- interaksi meja ---------- */
+  function pasangInteraksi(el, m){
+    var mulaiX, mulaiY, asalX, asalY, geser = false, sasaran = null;
+
+    el.addEventListener("pointerdown", function(ev){
+      if (!modeDenah && !isi[m.id]) return;   // meja kosong: tidak ada yang bisa diseret
+      ev.preventDefault();
+      geser = false; sasaran = null;
+      mulaiX = ev.clientX; mulaiY = ev.clientY;
+      asalX = m.x; asalY = m.y;
+      el.setPointerCapture(ev.pointerId);
+      if (modeDenah) el.classList.add("geser");
+    });
+
+    el.addEventListener("pointermove", function(ev){
+      if (!el.hasPointerCapture(ev.pointerId)) return;
+      var dx = (ev.clientX - mulaiX) / skala;
+      var dy = (ev.clientY - mulaiY) / skala;
+      if (!geser && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      geser = true;
+
+      if (modeDenah){
+        var x = Math.min(VW - W, Math.max(0, asalX + dx));
+        var y = Math.min(VH - H, Math.max(0, asalY + dy));
+        var j = tempelKeTetangga(m.id, x, y);
+        m.x = j.x; m.y = j.y;
+        el.style.left = m.x + "px";
+        el.style.top  = m.y + "px";
+        tampilGaris(j);
+        return;
+      }
+
+      /* mode siswa: menyeret nama */
+      if (!hantu){
+        hantu = document.createElement("div");
+        hantu.className = "hantu";
+        hantu.textContent = isi[m.id] || "";
+        plane.appendChild(hantu);
+        el.classList.add("pudar");
+      }
+      var p = keMaya(ev);
+      hantu.style.left = (p.x - W / 2) + "px";
+      hantu.style.top  = (p.y - H / 2) + "px";
+
+      var atas = mejaDi(p);
+      if (sasaran && (!atas || atas.id !== sasaran.id)){
+        var lama = elMeja(sasaran.id); if (lama) lama.classList.remove("sasaran");
+        sasaran = null;
+      }
+      if (atas && atas.id !== m.id && (!sasaran || sasaran.id !== atas.id)){
+        sasaran = atas;
+        var baru = elMeja(atas.id); if (baru) baru.classList.add("sasaran");
+      }
+    });
+
+    function selesai(ev){
+      try{ el.releasePointerCapture(ev.pointerId); }catch(e){}
+      el.classList.remove("geser");
+      sembunyiGaris();
+
+      if (hantu){ hantu.remove(); hantu = null; }
+      el.classList.remove("pudar");
+      if (sasaran){
+        var t = elMeja(sasaran.id); if (t) t.classList.remove("sasaran");
+      }
+
+      if (!geser){
+        if (!modeDenah) bukaPemilih(m);
+      } else if (modeDenah){
+        gambar(); segarkanTally(); simpan();
+      } else if (sasaran){
+        tukar(m.id, sasaran.id);
+        gambar(); segarkanTally(); simpan();
+      }
+      geser = false; sasaran = null;
+    }
+    el.addEventListener("pointerup", selesai);
+    el.addEventListener("pointercancel", selesai);
+
+    el.addEventListener("keydown", function(ev){
+      var langkah = ev.shiftKey ? 1 : 10;
+      var arah = {ArrowLeft:[-langkah,0], ArrowRight:[langkah,0], ArrowUp:[0,-langkah], ArrowDown:[0,langkah]}[ev.key];
+      if (modeDenah && arah){
+        ev.preventDefault();
+        m.x = Math.min(VW - W, Math.max(0, m.x + arah[0]));
+        m.y = Math.min(VH - H, Math.max(0, m.y + arah[1]));
+        gambar(); segarkanTally(); simpan();
+        var lagi = elMeja(m.id); if (lagi) lagi.focus();
+      } else if (!modeDenah && (ev.key === "Enter" || ev.key === " ")){
+        ev.preventDefault();
+        bukaPemilih(m);
+      }
+    });
+  }
+
+  function tempelKeTetangga(id, x, y){
+    var h = {x:x, y:y, v:null, h:null};
+    meja.forEach(function(q){
+      if (q.id === id) return;
+      if (h.v === null && Math.abs(q.x - x) <= TEMPEL){ h.x = q.x; h.v = q.x; }
+      if (h.h === null && Math.abs(q.y - y) <= TEMPEL){ h.y = q.y; h.h = q.y; }
+    });
+    return h;
+  }
+
+  function tampilGaris(j){
+    if (j.v !== null){ garisV.style.left = j.v + "px"; garisV.style.display = "block"; }
+    else garisV.style.display = "none";
+    if (j.h !== null){ garisH.style.top = j.h + "px"; garisH.style.display = "block"; }
+    else garisH.style.display = "none";
+  }
+  function sembunyiGaris(){ garisV.style.display = "none"; garisH.style.display = "none"; }
+
+  /* ---------- pemilih nama ---------- */
+  function bukaPemilih(m){
+    mejaTerpilih = m;
+    judulPilih.textContent = "Meja " + kodeMeja(m.id);
+    elCari.value = "";
+    btnLepas.hidden = !kunci[m.id];
+    isiDaftarNama();
+    tirai.hidden = false;
+    elCari.focus();
+  }
+
+  function tutupPemilih(){
+    tirai.hidden = true;
+    mejaTerpilih = null;
+  }
+
+  function isiDaftarNama(){
+    var cari = elCari.value.trim().toLowerCase();
+    var nama = bacaNama().filter(function(n){
+      return !cari || n.toLowerCase().indexOf(cari) !== -1;
+    });
+
+    elNamaList.innerHTML = "";
+
+    if (!bacaNama().length){
+      var p = document.createElement("p");
+      p.className = "hampa";
+      p.textContent = "Daftar kelas masih kosong. Isi dulu nama-namanya di panel kiri.";
+      elNamaList.appendChild(p);
+      return;
+    }
+    if (!nama.length){
+      var q = document.createElement("p");
+      q.className = "hampa";
+      q.textContent = "Tidak ada nama yang cocok.";
+      elNamaList.appendChild(q);
+      return;
+    }
+
+    nama.forEach(function(n){
+      var idLain = Object.keys(isi).filter(function(id){ return isi[id] === n; })[0];
+      var b = document.createElement("button");
+      b.type = "button";
+
+      var span = document.createElement("span");
+      span.textContent = n;
+      b.appendChild(span);
+
+      var tanda = document.createElement("span");
+      tanda.className = "dimana";
+      if (idLain === undefined) tanda.textContent = "belum duduk";
+      else if (idLain === mejaTerpilih.id) tanda.textContent = "di meja ini";
+      else tanda.textContent = "kini di " + kodeMeja(idLain);
+      b.appendChild(tanda);
+
+      b.addEventListener("click", function(){
+        tempatkan(mejaTerpilih.id, n);
+        tutupPemilih();
+        gambar(); segarkanTally(); simpan();
+      });
+      elNamaList.appendChild(b);
+    });
+  }
+
+  elCari.addEventListener("input", isiDaftarNama);
+  elCari.addEventListener("keydown", function(ev){
+    if (ev.key === "Enter"){
+      var pertama = elNamaList.querySelector("button");
+      if (pertama) pertama.click();
+    } else if (ev.key === "Escape"){
+      tutupPemilih();
+    }
+  });
+  tirai.addEventListener("pointerdown", function(ev){
+    if (ev.target === tirai) tutupPemilih();
+  });
+  document.addEventListener("keydown", function(ev){
+    if (ev.key === "Escape" && !tirai.hidden) tutupPemilih();
+    if (ev.key === "Escape" && !tiraiAturan.hidden) tutupEditor();
+  });
+  btnTutup.addEventListener("click", tutupPemilih);
+  btnKosong.addEventListener("click", function(){
+    if (!mejaTerpilih) return;
+    delete isi[mejaTerpilih.id];
+    delete kunci[mejaTerpilih.id];
+    tutupPemilih();
+    gambar(); segarkanTally(); simpan();
+  });
+  btnLepas.addEventListener("click", function(){
+    if (!mejaTerpilih) return;
+    delete kunci[mejaTerpilih.id];
+    tutupPemilih();
+    gambar(); segarkanTally(); simpan();
+  });
+
+  /* ---------- ukuran kanvas ---------- */
+  function ukurUlang(){
+    plane.style.width  = VW + "px";
+    plane.style.height = VH + "px";
+    board.style.left   = TEPI + "px";
+    board.style.width  = (VW - TEPI * 2) + "px";
+
+    var lebar = canvas.clientWidth || VW;
+    skala = lebar / VW;
+    plane.style.transform = "scale(" + skala + ")";
+    canvas.style.height = (VH * skala) + "px";
+  }
+
+  /* ---------- mode ---------- */
+  function setMode(denah){
+    modeDenah = denah;
+    canvas.classList.toggle("denah", denah);
+    panel.hidden = !denah;
+    mSiswa.classList.toggle("ghost", denah);
+    mDenah.classList.toggle("ghost", !denah);
+    if (denah){ tutupPemilih(); tutupEditor(); }
+    gambar(); segarkanTally();
+  }
+
+  /* ---------- simpan ---------- */
+  function keadaan(){
+    return {
+      format:"denah-kelas/1",
+      disimpan:new Date().toISOString(),
+      kelas:elKelas.value, daftar:elDaftar.value,
+      meja:meja, isi:isi, kunci:kunci, aturan:aturan, vw:VW, vh:VH,
+      baris:inBaris.value, kolom:inKolom.value, lorong:inLorong.value
+    };
+  }
+
+  function segarkanUrutId(){
+    var maks = 0;
+    meja.forEach(function(m){
+      var n = parseInt(String(m.id).replace(/^m/, ""), 10);
+      if (!isNaN(n) && n >= maks) maks = n + 1;
+    });
+    urutId = maks;
+  }
+
+  function terapkan(d){
+    elKelas.value  = d.kelas  || "";
+    elDaftar.value = d.daftar || "";
+    if (Array.isArray(d.meja) && d.meja.length){
+      meja = d.meja.map(function(m){ return {id:String(m.id), x:+m.x, y:+m.y}; });
+      segarkanUrutId();
+      if (d.vw) VW = +d.vw;
+      if (d.vh) VH = +d.vh;
+    }
+    isi   = d.isi   || {};
+    kunci = d.kunci || {};
+    aturan = (Array.isArray(d.aturan) ? d.aturan : [])
+      .filter(function(r){ return r && Array.isArray(r.nama); })
+      .map(function(r){
+        return {
+          jenis: r.jenis === "dekat" ? "dekat" : "pisah",
+          nama: r.nama.map(String).filter(function(n, i, a){ return n && a.indexOf(n) === i; }),
+          opsi: !!r.opsi
+        };
+      });
+    if (d.baris)  inBaris.value  = d.baris;
+    if (d.kolom)  inKolom.value  = d.kolom;
+    if (d.lorong !== undefined) inLorong.value = d.lorong;
+  }
+
+  /* window.storage hanya ada di dalam artifact Claude; di browser biasa pakai localStorage */
+  function adaStorage(){ return !!(window.storage && window.storage.get && window.storage.set); }
+
+  function simpan(){
+    var teks = JSON.stringify(keadaan());
+    if (adaStorage()){
+      try{ window.storage.set(KUNCI, teks); }catch(e){}
+      return;
+    }
+    try{ window.localStorage.setItem(KUNCI, teks); }catch(e){}
+  }
+
+  /* ---------- ekspor / impor ---------- */
+  var jamKabar = null;
+  function kabar(teks, buruk, tetap){
+    elKabar.textContent = teks || "";
+    elKabar.classList.toggle("buruk", !!buruk);
+    if (jamKabar) clearTimeout(jamKabar);
+    jamKabar = null;
+    if (teks && !tetap){
+      jamKabar = setTimeout(function(){
+        elKabar.textContent = "";
+        elKabar.classList.remove("buruk");
+      }, 7000);
+    }
+  }
+
+  function namaBerkas(){
+    var k = elKelas.value.trim().toLowerCase()
+      .replace(/[^\w\s-]+/g, "").replace(/\s+/g, "-");
+    return "denah-" + (k ? k + "-" : "") + new Date().toISOString().slice(0,10) + ".json";
+  }
+
+  function ekspor(){
+    try{
+      var blob = new Blob([JSON.stringify(keadaan(), null, 2)], {type:"application/json"});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      var nama = namaBerkas();
+      a.href = url; a.download = nama;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      kabar("Diekspor sebagai " + nama);
+    }catch(e){
+      kabar("Ekspor gagal: " + e.message, true);
+    }
+  }
+
+  function impor(file){
+    var r = new FileReader();
+    r.onload = function(){
+      var d;
+      try{ d = JSON.parse(r.result); }
+      catch(e){ kabar("Berkas tidak terbaca \u2014 isinya bukan JSON yang sah.", true); return; }
+
+      if (!d || typeof d !== "object" || !Array.isArray(d.meja) || !d.meja.length){
+        kabar("Berkas ini tidak berisi denah kelas.", true);
+        return;
+      }
+
+      terapkan(d);
+      setMode(false);
+      ukurUlang(); gambar(); segarkanTally(); simpan();
+      kabar(meja.length + " meja dimuat"
+        + (typeof d.disimpan === "string" ? " \u00b7 diekspor " + d.disimpan.slice(0,10) : "") + ".");
+    };
+    r.onerror = function(){ kabar("Berkas gagal dibaca.", true); };
+    r.readAsText(file);
+  }
+
+  function muat(){
+    if (!adaStorage()){
+      try{
+        var teks = window.localStorage.getItem(KUNCI);
+        if (teks) terapkan(JSON.parse(teks));
+      }catch(e){}
+      return Promise.resolve();
+    }
+    return window.storage.get(KUNCI).then(function(res){
+      if (!res || !res.value) return;
+      var d = JSON.parse(res.value);
+      terapkan(d);
+    }).catch(function(){});
+  }
+
+  /* ---------- kop cetak ---------- */
+  function siapkanKop(){
+    document.getElementById("kop-kelas").textContent = elKelas.value.trim() || "Denah tempat duduk";
+    document.getElementById("kop-tanggal").textContent =
+      new Date().toLocaleDateString("id-ID", {day:"numeric", month:"long", year:"numeric"});
+  }
+
+  /* ---------- kabel ---------- */
+  elDaftar.addEventListener("input", function(){
+    selaraskanDaftar();
+    gambar(); segarkanTally(); simpan();
+  });
+  elKelas.addEventListener("input", simpan);
+  btnAcak.addEventListener("click", acak);
+  btnCetak.addEventListener("click", function(){ siapkanKop(); window.print(); });
+  window.addEventListener("beforeprint", siapkanKop);
+  btnBuka.addEventListener("click", function(){
+    kunci = {}; gambar(); segarkanTally(); simpan();
+  });
+
+  btnEkspor.addEventListener("click", ekspor);
+  btnImpor.addEventListener("click", function(){ elBerkas.click(); });
+  elBerkas.addEventListener("change", function(){
+    if (elBerkas.files && elBerkas.files[0]) impor(elBerkas.files[0]);
+    elBerkas.value = "";
+  });
+
+  mSiswa.addEventListener("click", function(){ setMode(false); });
+  mDenah.addEventListener("click", function(){ setMode(true); });
+
+  btnSusun.addEventListener("click", function(){
+    meja = susun(+inBaris.value, +inKolom.value, inLorong.value);
+    isi = {}; kunci = {};
+    ukurUlang(); gambar(); segarkanTally(); simpan();
+  });
+
+  btnBawaan.addEventListener("click", function(){
+    inBaris.value = 5; inKolom.value = 6; inLorong.value = "3";
+    meja = denahBawaan();
+    isi = {}; kunci = {};
+    ukurUlang(); gambar(); segarkanTally(); simpan();
+  });
+
+  btnTambah.addEventListener("click", function(){
+    var t = meja.length;
+    meja.push({
+      id:"m" + (urutId++),
+      x: Math.min(VW - W, TEPI + (t % 6) * 30),
+      y: Math.min(VH - H, ATAS + (t % 5) * 26)
+    });
+    gambar(); segarkanTally(); simpan();
+  });
+
+  window.addEventListener("resize", ukurUlang);
+
+  meja = denahBawaan();
+  Promise.resolve(muat()).then(function(){
+    ukurUlang(); gambar(); segarkanTally();
+  });
+})();
+</script>
+</body>
+</html>
