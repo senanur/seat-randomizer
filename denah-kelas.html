@@ -519,7 +519,9 @@
     color:var(--ink);
     cursor:pointer;
   }
+  .opsi[hidden]{display:none}
   .pemilih input[type=checkbox]{width:auto;margin:0;padding:0;accent-color:var(--ink)}
+  .pemilih input[type=number]{width:56px;padding:5px 6px;font-family:var(--mono);font-size:13px}
   .daftar-centang label{
     display:flex;
     align-items:center;
@@ -697,9 +699,11 @@
       <div class="pilih-jenis">
         <button type="button" class="kecil" id="jenis-pisah">Pisahkan</button>
         <button type="button" class="kecil ghost" id="jenis-dekat">Dekatkan</button>
+        <button type="button" class="kecil ghost" id="jenis-depan">Depan</button>
       </div>
       <p class="jelas" id="jenis-jelas"></p>
-      <label class="opsi"><input type="checkbox" id="aturan-opsi"><span id="aturan-opsi-teks"></span></label>
+      <label class="opsi" id="opsi-centang"><input type="checkbox" id="aturan-opsi"><span id="aturan-opsi-teks"></span></label>
+      <label class="opsi" id="opsi-baris" hidden>Harus duduk di <input type="number" id="aturan-baris" min="1" max="14" value="1"> baris terdepan</label>
       <input type="text" id="cari-aturan" placeholder="Cari nama&hellip;" autocomplete="off" spellcheck="false">
     </div>
     <div class="daftar-nama daftar-centang" id="daftar-centang"></div>
@@ -770,6 +774,10 @@
   var judulAturan   = document.getElementById("aturan-judul");
   var jPisah        = document.getElementById("jenis-pisah");
   var jDekat        = document.getElementById("jenis-dekat");
+  var jDepan        = document.getElementById("jenis-depan");
+  var elOpsiCentang = document.getElementById("opsi-centang");
+  var elOpsiBaris   = document.getElementById("opsi-baris");
+  var elBarisDepan  = document.getElementById("aturan-baris");
   var elJelas       = document.getElementById("jenis-jelas");
   var elOpsi        = document.getElementById("aturan-opsi");
   var elOpsiTeks    = document.getElementById("aturan-opsi-teks");
@@ -780,7 +788,7 @@
   var btnBatalAturan  = document.getElementById("btn-batal-aturan");
 
   var meja = [], isi = {}, kunci = {};
-  var aturan = [];          // [{jenis:"pisah"|"dekat", nama:[...], opsi:bool}]
+  var aturan = [];          // [{jenis:"pisah"|"dekat"|"depan", nama:[...], opsi:bool, baris:N (depan)}]
   var draf = null;          // aturan yang sedang disunting
   var modeDenah = false, skala = 1, urutId = 0;
   var mejaTerpilih = null;
@@ -876,7 +884,16 @@
   }
 
   /* ---------- aturan duduk ---------- */
+  function labelJenis(r, pemisah){
+    if (r.jenis === "depan") return "Depan" + pemisah + (r.baris > 1 ? "baris 1–" + r.baris : "baris 1");
+    if (r.jenis === "pisah") return "Pisahkan" + (r.opsi ? pemisah + "beda baris" : "");
+    return "Dekatkan" + (r.opsi ? pemisah + "sebaris" : "");
+  }
+
+  function minimalAnggota(jenis){ return jenis === "depan" ? 1 : 2; }
+
   function teksAturan(r){
+    if (r.jenis === "depan") return labelJenis(r, " (") + "): " + r.nama.join(", ");
     var jenis = r.jenis === "pisah"
       ? "Pisahkan" + (r.opsi ? " (beda baris)" : "")
       : "Dekatkan" + (r.opsi ? " (sebaris)" : "");
@@ -889,7 +906,7 @@
     bacaNama().forEach(function(n){ ada[n] = true; });
     return aturan
       .map(function(r){ return {r:r, nama:r.nama.filter(function(n){ return ada[n]; })}; })
-      .filter(function(a){ return a.nama.length >= 2; });
+      .filter(function(a){ return a.nama.length >= minimalAnggota(a.r.jenis); });
   }
 
   /* jumlah pelanggaran satu aturan; posisi = nama -> indeks kursi. Anggota yang belum duduk diabaikan. */
@@ -897,6 +914,16 @@
     var kursi = a.nama.map(function(n){ return posisi[n]; })
       .filter(function(i){ return i !== undefined; });
     var buruk = 0, i, j;
+
+    if (a.r.jenis === "depan"){
+      kursi.forEach(function(k){
+        if (peta.kursi[k].baris >= a.r.baris){
+          buruk++;
+          if (catat) catat[k] = true;
+        }
+      });
+      return buruk;
+    }
 
     if (a.r.jenis === "pisah"){
       for (i = 0; i < kursi.length; i++){
@@ -953,8 +980,13 @@
 
     aktif.forEach(function(a){
       var semuaTerkunci = a.nama.every(function(n){ return posisi[n] !== undefined; });
-      if ((a.r.jenis === "pisah" || semuaTerkunci) && nilaiAturan(a, posisi, peta))
+      if ((a.r.jenis !== "dekat" || semuaTerkunci) && nilaiAturan(a, posisi, peta))
         masalah.push(teksAturan(a.r) + " — dilanggar oleh meja yang terkunci.");
+      if (a.r.jenis === "depan"){
+        var muat = peta.kursi.filter(function(k){ return k.baris < a.r.baris; }).length;
+        if (a.nama.length > muat)
+          masalah.push(teksAturan(a.r) + " — " + a.nama.length + " orang tapi hanya ada " + muat + " meja di baris itu.");
+      }
       if (a.r.jenis === "pisah" && a.r.opsi && a.nama.length > jumlahBaris)
         masalah.push(teksAturan(a.r) + " — " + a.nama.length + " orang tapi hanya ada " + jumlahBaris + " baris.");
     });
@@ -1279,9 +1311,7 @@
       var kepala = document.createElement("div");
       kepala.className = "jenis";
       var label = document.createElement("span");
-      label.textContent = r.jenis === "pisah"
-        ? "Pisahkan" + (r.opsi ? " · beda baris" : "")
-        : "Dekatkan" + (r.opsi ? " · sebaris" : "");
+      label.textContent = labelJenis(r, " · ");
       kepala.appendChild(label);
 
       var tombol = document.createElement("span");
@@ -1307,8 +1337,8 @@
         li.appendChild(s);
         if (i < r.nama.length - 1) li.appendChild(document.createTextNode(", "));
       });
-      if (aktif < 2){
-        li.title = "Kurang dari dua nama yang ada di daftar kelas — aturan ini tidak berlaku";
+      if (aktif < minimalAnggota(r.jenis)){
+        li.title = "Tidak cukup nama yang ada di daftar kelas — aturan ini tidak berlaku";
         li.style.opacity = ".55";
       }
       elDaftarAturan.appendChild(li);
@@ -1318,8 +1348,8 @@
   /* ---------- penyunting aturan ---------- */
   function bukaEditor(r){
     draf = r
-      ? {asal:r, jenis:r.jenis, nama:r.nama.slice(), opsi:!!r.opsi}
-      : {asal:null, jenis:"pisah", nama:[], opsi:false};
+      ? {asal:r, jenis:r.jenis, nama:r.nama.slice(), opsi:!!r.opsi, baris:r.baris || 1}
+      : {asal:null, jenis:"pisah", nama:[], opsi:false, baris:1};
     judulAturan.textContent = r ? "Ubah aturan" : "Aturan baru";
     elCariAturan.value = "";
     segarkanEditor();
@@ -1333,12 +1363,18 @@
   }
 
   function segarkanEditor(){
-    var pisah = draf.jenis === "pisah";
-    jPisah.classList.toggle("ghost", !pisah);
-    jDekat.classList.toggle("ghost", pisah);
+    var pisah = draf.jenis === "pisah", depan = draf.jenis === "depan";
+    jPisah.classList.toggle("ghost", draf.jenis !== "pisah");
+    jDekat.classList.toggle("ghost", draf.jenis !== "dekat");
+    jDepan.classList.toggle("ghost", !depan);
+    elOpsiCentang.hidden = depan;
+    elOpsiBaris.hidden = !depan;
     elOpsi.checked = draf.opsi;
+    elBarisDepan.value = draf.baris;
     elOpsiTeks.textContent = pisah ? "Juga harus beda baris" : "Harus sebaris (kiri-kanan saja)";
-    elJelas.textContent = pisah
+    elJelas.textContent = depan
+      ? "Untuk siswa yang perlu dekat papan tulis, misalnya karena penglihatan. Baris 1 adalah baris terdekat ke papan."
+      : pisah
       ? "Tidak ada dua anggota yang boleh duduk bersebelahan — kiri, kanan, depan, belakang, maupun diagonal. Lorong dihitung sebagai pemisah."
       : "Semua anggota harus duduk mengumpul: tiap anggota bersebelahan dengan anggota lain, termasuk depan-belakang dan diagonal.";
     isiCentang();
@@ -1387,13 +1423,15 @@
 
   function segarkanInfoAturan(){
     var n = draf.nama.length;
-    elInfoAturan.textContent = n + " dipilih" + (n < 2 ? " · minimal 2" : "");
-    btnSimpanAturan.disabled = n < 2;
+    var min = minimalAnggota(draf.jenis);
+    elInfoAturan.textContent = n + " dipilih" + (n < min ? " · minimal " + min : "");
+    btnSimpanAturan.disabled = n < min;
   }
 
   function simpanAturan(){
-    if (!draf || draf.nama.length < 2) return;
+    if (!draf || draf.nama.length < minimalAnggota(draf.jenis)) return;
     var baru = {jenis:draf.jenis, nama:draf.nama.slice(), opsi:draf.opsi};
+    if (draf.jenis === "depan"){ baru.opsi = false; baru.baris = draf.baris; }
     if (draf.asal){
       var i = aturan.indexOf(draf.asal);
       if (i !== -1) aturan[i] = baru; else aturan.push(baru);
@@ -1407,7 +1445,13 @@
   btnTambahAturan.addEventListener("click", function(){ bukaEditor(null); });
   jPisah.addEventListener("click", function(){ draf.jenis = "pisah"; segarkanEditor(); });
   jDekat.addEventListener("click", function(){ draf.jenis = "dekat"; segarkanEditor(); });
+  jDepan.addEventListener("click", function(){ draf.jenis = "depan"; segarkanEditor(); });
   elOpsi.addEventListener("change", function(){ draf.opsi = elOpsi.checked; });
+  elBarisDepan.addEventListener("input", function(){
+    var n = parseInt(elBarisDepan.value, 10);
+    if (n >= 1) draf.baris = Math.min(14, n);
+  });
+  elBarisDepan.addEventListener("change", function(){ elBarisDepan.value = draf.baris; });
   elCariAturan.addEventListener("input", isiCentang);
   elCariAturan.addEventListener("keydown", function(ev){ if (ev.key === "Escape") tutupEditor(); });
   btnSimpanAturan.addEventListener("click", simpanAturan);
@@ -1699,9 +1743,10 @@
       .filter(function(r){ return r && Array.isArray(r.nama); })
       .map(function(r){
         return {
-          jenis: r.jenis === "dekat" ? "dekat" : "pisah",
+          jenis: r.jenis === "dekat" || r.jenis === "depan" ? r.jenis : "pisah",
           nama: r.nama.map(String).filter(function(n, i, a){ return n && a.indexOf(n) === i; }),
-          opsi: !!r.opsi
+          opsi: !!r.opsi,
+          baris: Math.max(1, Math.min(14, parseInt(r.baris, 10) || 1))
         };
       });
     if (d.baris)  inBaris.value  = d.baris;
